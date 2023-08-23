@@ -1,4 +1,4 @@
-#include <WiFi.h>
+#include <ESP8266WiFi.h>
 #include <ThingSpeak.h>
 #include <Adafruit_BMP280.h>
 #include <DHT.h>
@@ -53,6 +53,7 @@ ThingSpeak.setField(2,h1);
 }
 
 void setup() {
+  pinMode(D3, OUTPUT);
   Serial.begin(115200); 
   Serial.println("Conectando a WIFI");
   WiFi.begin(ssid,password); 
@@ -68,6 +69,10 @@ void setup() {
 }
 
 void loop() {
+  digitalWrite(D3, HIGH);
+  delay(1000);
+  digitalWrite(D3, LOW);
+  delay(1000);
   float temp= bmp.readTemperature(); 
   float presion= bmp.readPressure();
   float altitud= bmp.readAltitude();
