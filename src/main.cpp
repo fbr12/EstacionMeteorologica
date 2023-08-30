@@ -8,14 +8,25 @@ using namespace std;
 
 #define pin1 13
 
+//Sensor Hall//
+const int hallPin = 2; // Pin digital conectado al sensor Hall
+volatile unsigned int revolutions = 0;
+unsigned long startTime;
+unsigned long elapsedTime;
+float windSpeedKmh;
+
+//Wifi//
 const char* ssid= "BA ESCUELA"; 
 const char* password= "";
 unsigned long channelID= 1332310; 
 const char* WriteAPIKey= "5SJCDAUGILT6TYMW";
 WiFiClient cliente; 
+
+//Sensores de temperatura ,y humedad, y de presion//
 DHT dht1(pin1, DHT11); 
 Adafruit_BMP280 bmp;
 
+//Funcion que permite leer el BMP (sensor de presion y altitud)//
 void leer_bmp(){
 float temp= bmp.readTemperature(); 
 float presion= bmp.readPressure();
@@ -32,6 +43,7 @@ Serial.println("Metros");
 Serial.println("-------------------------");
 }
 
+//Funcion que permite leer el DHT11 (sensor de temperatura y humedad)//
 void leer_dht1(){
 float t1= dht1.readTemperature(); 
 float h1= dht1.readHumidity();
@@ -52,6 +64,20 @@ ThingSpeak.setField(1,t1);
 ThingSpeak.setField(2,h1);
 }
 
+//Funcion que permite contar las revoluciones//
+void countRevolutions() {
+  revolutions++;
+}
+
+//Funcion que permite calcular la velocidad del viento en km/h//
+float calculateWindSpeed(unsigned int revs, unsigned long time) {
+  float circumference = 0.1; // Circunferencia del anemómetro en metros (valor ficticio)
+  float windSpeedMps = (revs * circumference) / time;
+  float windSpeedKmh = windSpeedMps * 3.6;
+  return windSpeedKmh;
+}
+
+//Iniciación del WIFI y el cliente de ThingSpeak//
 void setup() {
   Serial.begin(115200); 
   Serial.println("Conectando a WIFI");
@@ -65,8 +91,13 @@ void setup() {
   ThingSpeak.begin(cliente); 
   dht1.begin();
   bmp.begin(0x76);
+
+  pinMode(hallPin, INPUT_PULLDOWN);
+  attachInterrupt(digitalPinToInterrupt(hallPin), countRevolutions, RISING);
+  startTime = millis();
 }
 
+//Inicio del Programa//
 void loop() {
   float temp= bmp.readTemperature(); 
   float presion= bmp.readPressure();
@@ -81,4 +112,17 @@ void loop() {
   ThingSpeak.setField(3,temp); 
   ThingSpeak.setField(4,presion);
   ThingSpeak.setField(5,altitud);
+
+  elapsedTime = millis() - startTime;
+  if (elapsedTime >= 1000) { // Calcular velocidad cada 1 segundo
+    detachInterrupt(digitalPinToInterrupt(hallPin)); // Detener interrupciones durante el cálculo
+    windSpeedKmh = calculateWindSpeed(revolutions, elapsedTime);
+    Serial.print("Velocidad del viento: ");
+    Serial.print(windSpeedKmh);
+    Serial.println(" km/h");
+    
+    revolutions = 0;
+    startTime = millis();
+    attachInterrupt(digitalPinToInterrupt(hallPin), countRevolutions, RISING);
 } 
+}
