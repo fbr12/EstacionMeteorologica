@@ -41,6 +41,7 @@ Serial.print("Altitud bmp: ");
 Serial.print(altitud);
 Serial.println("Metros");
 Serial.println("-------------------------");
+ThingSpeak.setField(3,presion);
 }
 
 //Funcion que permite leer el DHT11 (sensor de temperatura y humedad)//
@@ -99,6 +100,18 @@ void setup() {
 
 //Inicio del Programa//
 void loop() {
+  elapsedTime = millis() - startTime;
+  if (elapsedTime >= 1000) { // Calcular velocidad cada 1 segundo
+    detachInterrupt(digitalPinToInterrupt(hallPin)); // Detener interrupciones durante el cálculo
+    windSpeedKmh = calculateWindSpeed(revolutions, elapsedTime);
+    Serial.print("Velocidad del viento: ");
+    Serial.print(windSpeedKmh);
+    Serial.println(" km/h");
+    revolutions = 0;
+    startTime = millis();
+    attachInterrupt(digitalPinToInterrupt(hallPin), countRevolutions, RISING);
+    ThingSpeak.setField(4,windSpeedKmh);
+  }    
   float temp= bmp.readTemperature(); 
   float presion= bmp.readPressure();
   float altitud= bmp.readAltitude();
@@ -109,20 +122,4 @@ void loop() {
   ThingSpeak.writeFields(channelID,WriteAPIKey); 
   Serial.println("datos enviados");
   delay(14000);
-  ThingSpeak.setField(3,temp); 
-  ThingSpeak.setField(4,presion);
-  ThingSpeak.setField(5,altitud);
-
-  elapsedTime = millis() - startTime;
-  if (elapsedTime >= 1000) { // Calcular velocidad cada 1 segundo
-    detachInterrupt(digitalPinToInterrupt(hallPin)); // Detener interrupciones durante el cálculo
-    windSpeedKmh = calculateWindSpeed(revolutions, elapsedTime);
-    Serial.print("Velocidad del viento: ");
-    Serial.print(windSpeedKmh);
-    Serial.println(" km/h");
-    
-    revolutions = 0;
-    startTime = millis();
-    attachInterrupt(digitalPinToInterrupt(hallPin), countRevolutions, RISING);
-} 
 }
