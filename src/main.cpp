@@ -5,15 +5,16 @@
 #include <DHT_U.h>
 #include <iostream>
 #include <PubSubClient.h>
+#include "FS.h"
 using namespace std;
 
-#define pin1 13
+#define pin1 2
+#define pin2 14
 // Configuracion del servidor Mqtt//
 const char *mqttServer = "broker.hivemq.com";
 const int mqttPort = 1883;
 const char *mqttUser = "Tu_Usuario";
 const char *mqttPassword = "Tu_Contraseña";
-PubSubClient client(cliente);
 
 // Topics MQTT //
 const char *humidityTopic = "/ET28/65/RBM/Humidity";
@@ -34,10 +35,11 @@ const char *password = "";
 unsigned long channelID = 1332310;
 const char *WriteAPIKey = "5SJCDAUGILT6TYMW";
 WiFiClient cliente;
+PubSubClient client(cliente);
 
 // Sensores de temperatura ,y humedad, y de presion//
 DHT dht(pin1, DHT11);
-Adafruit_BMP280 bmp;
+Adafruit_BMP280 bmp(pin2);
 
 // Funcion que permite leer el BMP (sensor de presion y altitud)//
 void leerBmp()
@@ -63,7 +65,7 @@ void leerDht1()
 {
   float t1 = dht.readTemperature();
   float h1 = dht.readHumidity();
-  while (isnan(t1) || isnan(h1))
+  while (isnan(t1) && isnan(h1))
   {
     Serial.println("lectura incorrecta, repetir");
     delay(2000);
@@ -118,6 +120,7 @@ float leerAnemometro2()
   revolutions = 0;
   startTime = millis();
   attachInterrupt(digitalPinToInterrupt(hallPin), countRevolutions, RISING);
+  return windSpeedKmh;
 }
 
 // Funcion para determinar la velocidad del viento en Km/H //
@@ -145,29 +148,6 @@ void reconnect()
       delay(5000);
     }
   }
-}
-
-// Iniciación del WIFI, de los sensores y el cliente de ThingSpeak//
-void setup()
-{
-  Serial.begin(9600);
-  Serial.println("Conectando a WIFI");
-  client.setServer(mqttServer, mqttPort);
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("WiFi conectado");
-
-  ThingSpeak.begin(cliente);
-  dht.begin();
-  bmp.begin(0x76);
-
-  pinMode(hallPin, INPUT_PULLDOWN);
-  attachInterrupt(digitalPinToInterrupt(hallPin), countRevolutions, RISING);
-  startTime = millis();
 }
 
 // Funcion para enviar los datos al servidor MQTT //
@@ -198,6 +178,29 @@ void enviarDatosMqtt()
   client.publish(humidityTopic, humedad.c_str());
   client.publish(pressureTopic, presion.c_str());
   client.publish(windTopic, viento.c_str()); // Enviar datos cada 6 segundos
+}
+
+// Iniciación del WIFI, de los sensores y el cliente de ThingSpeak//
+void setup()
+{
+  Serial.begin(9600);
+  Serial.println("Conectando a WIFI");
+  client.setServer(mqttServer, mqttPort);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("WiFi conectado");
+
+  ThingSpeak.begin(cliente);
+  dht.begin();
+  bmp.begin(0x76);
+
+  pinMode(hallPin, INPUT_PULLDOWN);
+  attachInterrupt(digitalPinToInterrupt(hallPin), countRevolutions, RISING);
+  startTime = millis();
 }
 
 // Inicio del Programa//
