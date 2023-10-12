@@ -9,7 +9,9 @@
 using namespace std;
 
 #define pin1 2
-#define pin2 14
+#define pin2 
+#define BMP_SCK  (22)
+#define BMP_MOSI (21)
 // Configuracion del servidor Mqtt//
 const char *mqttServer = "broker.hivemq.com";
 const int mqttPort = 1883;
@@ -39,7 +41,7 @@ PubSubClient client(cliente);
 
 // Sensores de temperatura ,y humedad, y de presion//
 DHT dht(pin1, DHT11);
-Adafruit_BMP280 bmp(pin2);
+Adafruit_BMP280 bmp;
 
 // Funcion que permite leer el BMP (sensor de presion y altitud)//
 void leerBmp()
