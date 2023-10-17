@@ -6,6 +6,7 @@
 #include <iostream>
 #include <PubSubClient.h>
 #include "FS.h"
+#include <Wire.h>
 using namespace std;
 
 #define pin1 2
@@ -46,20 +47,18 @@ Adafruit_BMP280 bmp;
 // Funcion que permite leer el BMP (sensor de presion y altitud)//
 void leerBmp()
 {
+  float seaLevelPressure = 1013.25; 
+  float pressure = bmp.readPressure() / 100.0; 
+  float altitude = 44330.0 * (1.0 - pow((pressure / seaLevelPressure), 0.1903));
   float temp = bmp.readTemperature();
-  float presion = bmp.readPressure();
-  float altitud = bmp.readAltitude();
   Serial.print("Temperatura bmp: ");
   Serial.print(temp);
   Serial.println("°C");
   Serial.print("Presion bmp: ");
-  Serial.print(presion);
+  Serial.print(pressure);
   Serial.println("hPa");
-  Serial.print("Altitud bmp: ");
-  Serial.print(altitud);
-  Serial.println("Metros");
   Serial.println("-------------------------");
-  ThingSpeak.setField(3, presion);
+  ThingSpeak.setField(3, pressure);
 }
 
 // Funcion que permite leer el DHT11 (sensor de temperatura y humedad)//
@@ -172,7 +171,7 @@ void enviarDatosMqtt()
     return;
   }
 
-  String presion = String(pressure);
+  String presion = String(pressure/100);
   String temperatura = String(temperature);
   String humedad = String(humidity);
   String viento = String(wind);
@@ -189,6 +188,7 @@ void setup()
   Serial.println("Conectando a WIFI");
   client.setServer(mqttServer, mqttPort);
   WiFi.begin(ssid, password);
+  Wire.begin(21,22);
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(500);
@@ -217,3 +217,4 @@ void loop()
   Serial.println("datos enviados");
   delay(14000);
 }
+
