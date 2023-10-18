@@ -10,9 +10,11 @@
 using namespace std;
 
 #define pin1 2
-#define pin2 
-#define BMP_SCK  (22)
+#define pin2
+#define BMP_SCK (22)
 #define BMP_MOSI (21)
+#define SensorDeLluvia (32)
+
 // Configuracion del servidor Mqtt//
 const char *mqttServer = "broker.hivemq.com";
 const int mqttPort = 1883;
@@ -24,6 +26,7 @@ const char *humidityTopic = "/ET28/65/RBM/Humidity";
 const char *temperatureTopic = "/ET28/65/RBM/Temperature";
 const char *pressureTopic = "/ET28/65/RBM/Pressure";
 const char *windTopic = "/ET28/65/RBM/Wind";
+const char *rainTopic = "/ET28/65/RBM/Rain";
 
 // Sensor Hall//
 const int hallPin = 2; // Pin digital conectado al sensor Hall
@@ -47,8 +50,8 @@ Adafruit_BMP280 bmp;
 // Funcion que permite leer el BMP (sensor de presion y altitud)//
 void leerBmp()
 {
-  float seaLevelPressure = 1013.25; 
-  float pressure = bmp.readPressure() / 100.0; 
+  float seaLevelPressure = 1013.25;
+  float pressure = bmp.readPressure() / 100.0;
   float altitude = 44330.0 * (1.0 - pow((pressure / seaLevelPressure), 0.1903));
   float temp = bmp.readTemperature();
   Serial.print("Temperatura bmp: ");
@@ -150,6 +153,28 @@ void reconnect()
     }
   }
 }
+string howMuchRain()
+{
+  int valorSensorLluvia = analogRead(SensorDeLluvia);
+  int PocaLluvia = 100;
+  int MuchaLluvia = 500;
+  if (valorSensorLluvia < PocaLluvia)
+  {
+    return "No está lloviendo.";
+  }
+  else if (valorSensorLluvia < MuchaLluvia)
+  {
+    return "Está lloviendo un poco.";
+  }
+  else if (isnan(valorSensorLluvia))
+  {
+    return "Error al leer sensor de lluvia";
+  }
+  else
+  {
+    return "Está lloviendo mucho.";
+  }
+}
 
 // Funcion para enviar los datos al servidor MQTT //
 void enviarDatosMqtt()
@@ -164,6 +189,7 @@ void enviarDatosMqtt()
   float temperature = dht.readTemperature();
   float pressure = bmp.readPressure();
   const int wind = leerAnemometro2();
+  string rain = howMuchRain();
 
   if (isnan(humidity) || isnan(temperature))
   {
@@ -171,14 +197,37 @@ void enviarDatosMqtt()
     return;
   }
 
-  String presion = String(pressure/100);
+  String presion = String(pressure / 100);
   String temperatura = String(temperature);
   String humedad = String(humidity);
   String viento = String(wind);
+  client.publish(rainTopic, rain.c_str());
   client.publish(temperatureTopic, temperatura.c_str());
   client.publish(humidityTopic, humedad.c_str());
   client.publish(pressureTopic, presion.c_str());
   client.publish(windTopic, viento.c_str()); // Enviar datos cada 6 segundos
+}
+void leerSensorDeLluvia()
+{
+  int valorSensorLluvia = analogRead(SensorDeLluvia);
+  int PocaLluvia = 100;
+  int MuchaLluvia = 500;
+  if (valorSensorLluvia < PocaLluvia)
+  {
+    Serial.println("No está lloviendo.");
+  }
+  else if (valorSensorLluvia < MuchaLluvia)
+  {
+    Serial.println("Está lloviendo un poco.");
+  }
+  else if (isnan(valorSensorLluvia))
+  {
+    Serial.println("Error al leer sensor de lluvia");
+  }
+  else
+  {
+    Serial.println("Está lloviendo mucho.");
+  }
 }
 
 // Iniciación del WIFI, de los sensores y el cliente de ThingSpeak//
@@ -188,7 +237,7 @@ void setup()
   Serial.println("Conectando a WIFI");
   client.setServer(mqttServer, mqttPort);
   WiFi.begin(ssid, password);
-  Wire.begin(21,22);
+  Wire.begin(21, 22);
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(500);
@@ -212,9 +261,10 @@ void loop()
   leerDht1();
   delay(2000);
   leerBmp();
+  delay(2000);
+  leerSensorDeLluvia();
   ThingSpeak.writeFields(channelID, WriteAPIKey);
   enviarDatosMqtt();
   Serial.println("datos enviados");
   delay(14000);
 }
-
