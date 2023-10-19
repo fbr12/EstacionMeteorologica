@@ -156,13 +156,14 @@ void reconnect()
 string howMuchRain()
 {
   int valorSensorLluvia = analogRead(SensorDeLluvia);
-  int PocaLluvia = 100;
-  int MuchaLluvia = 500;
-  if (valorSensorLluvia < PocaLluvia)
+  int PocaLluvia = 3000;
+  int MuchaLluvia = 2300;
+  Serial.println(valorSensorLluvia);
+  if (valorSensorLluvia > PocaLluvia)
   {
     return "No está lloviendo.";
   }
-  else if (valorSensorLluvia < MuchaLluvia)
+  else if (valorSensorLluvia > MuchaLluvia && valorSensorLluvia < PocaLluvia)
   {
     return "Está lloviendo un poco.";
   }
@@ -170,10 +171,12 @@ string howMuchRain()
   {
     return "Error al leer sensor de lluvia";
   }
-  else
+  else if (valorSensorLluvia < MuchaLluvia)
   {
-    return "Está lloviendo mucho.";
+    return "Esta Lloviendo mucho";
   }
+
+  return "No hay datos disponibles";
 }
 
 // Funcion para enviar los datos al servidor MQTT //
@@ -187,7 +190,7 @@ void enviarDatosMqtt()
 
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
-  float pressure = bmp.readPressure();
+  float pressure = bmp.readPressure() / 100.0;
   const int wind = leerAnemometro2();
   string rain = howMuchRain();
 
@@ -197,7 +200,7 @@ void enviarDatosMqtt()
     return;
   }
 
-  String presion = String(pressure / 100);
+  String presion = String(pressure);
   String temperatura = String(temperature);
   String humedad = String(humidity);
   String viento = String(wind);
@@ -210,13 +213,14 @@ void enviarDatosMqtt()
 void leerSensorDeLluvia()
 {
   int valorSensorLluvia = analogRead(SensorDeLluvia);
-  int PocaLluvia = 100;
-  int MuchaLluvia = 500;
-  if (valorSensorLluvia < PocaLluvia)
+  int PocaLluvia = 3000;
+  int MuchaLluvia = 2300;
+  Serial.println(valorSensorLluvia);
+  if (valorSensorLluvia > PocaLluvia)
   {
     Serial.println("No está lloviendo.");
   }
-  else if (valorSensorLluvia < MuchaLluvia)
+  else if (valorSensorLluvia > MuchaLluvia && valorSensorLluvia < PocaLluvia)
   {
     Serial.println("Está lloviendo un poco.");
   }
@@ -224,9 +228,9 @@ void leerSensorDeLluvia()
   {
     Serial.println("Error al leer sensor de lluvia");
   }
-  else
+  else if (valorSensorLluvia < MuchaLluvia)
   {
-    Serial.println("Está lloviendo mucho.");
+    Serial.println("Esta Lloviando mucho");
   }
 }
 
