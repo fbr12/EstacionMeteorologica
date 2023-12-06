@@ -1,12 +1,13 @@
-#include <WiFi.h>
-#include <ThingSpeak.h>
-#include <Adafruit_BMP280.h>
+#include "FS.h"
 #include <DHT.h>
+#include <WiFi.h>
+#include <Wire.h>
 #include <DHT_U.h>
 #include <iostream>
+#include <Arduino.h>
 #include <PubSubClient.h>
-#include "FS.h"
-#include <Wire.h>
+#include <Adafruit_BMP280.h>
+
 using namespace std;
 
 #define pin1 2
@@ -61,7 +62,6 @@ void leerBmp()
   Serial.print(pressure);
   Serial.println("hPa");
   Serial.println("-------------------------");
-  ThingSpeak.setField(3, pressure);
 }
 
 // Funcion que permite leer el DHT11 (sensor de temperatura y humedad)//
@@ -83,8 +83,6 @@ void leerDht1()
   Serial.print(h1);
   Serial.println("%");
   Serial.println("-------------------------");
-  ThingSpeak.setField(1, t1);
-  ThingSpeak.setField(2, h1);
 }
 
 // Funcion que permite contar las revoluciones//
@@ -105,15 +103,22 @@ float calculateWindSpeed(unsigned int revs, unsigned long time)
 // Funcion que permite leer el anemometro para utilizarla en el main loop //
 void leerAnemometro()
 {
-  detachInterrupt(digitalPinToInterrupt(hallPin)); // Detener interrupciones durante el cálculo
-  windSpeedKmh = calculateWindSpeed(revolutions, elapsedTime);
-  Serial.print("Velocidad del viento: ");
-  Serial.print(windSpeedKmh);
-  Serial.println(" km/h");
-  revolutions = 0;
-  startTime = millis();
-  attachInterrupt(digitalPinToInterrupt(hallPin), countRevolutions, RISING);
-  ThingSpeak.setField(4, windSpeedKmh);
+  unsigned long tiempoActual = millis();
+
+  if (tiempoActual - tiempoAnterior >= 5000)
+  {                                                                      // Muestra la velocidad cada 5 segundos
+    float tiempoTranscurrido = (tiempoActual - tiempoAnterior) / 1000.0; // En segundos
+    float revolucionesPorSegundo = contadorVueltas / tiempoTranscurrido;
+    float velocidadMetrosPorSegundo = revolucionesPorSegundo * distanciaPorVuelta;
+    float velocidadKmPorHora = velocidadMetrosPorSegundo * 3.6;
+
+    Serial.print("Velocidad del viento: ");
+    Serial.print(velocidadKmPorHora);
+    Serial.println(" km/h");
+
+    tiempoAnterior = tiempoActual;
+    contadorVueltas = 0;
+  }
 }
 
 // Funcion que permite leer el anemometro para utilizarla al enviar los datos al Servidor MQTT //
@@ -234,7 +239,7 @@ void leerSensorDeLluvia()
   }
 }
 
-// Iniciación del WIFI, de los sensores y el cliente de ThingSpeak//
+// Iniciación del WIFI, de los sensores y del cliente MQTT//
 void setup()
 {
   Serial.begin(9600);
@@ -249,13 +254,8 @@ void setup()
   }
   Serial.println("WiFi conectado");
 
-  ThingSpeak.begin(cliente);
   dht.begin();
   bmp.begin(0x76);
-
-  pinMode(hallPin, INPUT_PULLDOWN);
-  attachInterrupt(digitalPinToInterrupt(hallPin), countRevolutions, RISING);
-  startTime = millis();
 }
 
 // Inicio del Programa//
@@ -267,7 +267,6 @@ void loop()
   leerBmp();
   delay(2000);
   leerSensorDeLluvia();
-  ThingSpeak.writeFields(channelID, WriteAPIKey);
   enviarDatosMqtt();
   Serial.println("datos enviados");
   delay(14000);
