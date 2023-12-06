@@ -11,7 +11,6 @@
 using namespace std;
 
 #define pin1 2
-#define pin2
 #define BMP_SCK (22)
 #define BMP_MOSI (21)
 #define SensorDeLluvia (32)
