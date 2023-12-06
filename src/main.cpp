@@ -102,8 +102,8 @@ float leerAnemometro()
   unsigned long tiempoActual = millis();
 
   if (tiempoActual - tiempoAnterior >= 5000)
-  {                                                                      // Muestra la velocidad cada 5 segundos
-    float tiempoTranscurrido = (tiempoActual - tiempoAnterior) / 1000.0; // En segundos
+  {
+    float tiempoTranscurrido = (tiempoActual - tiempoAnterior) / 1000.0;
     float revolucionesPorSegundo = contadorVueltas / tiempoTranscurrido;
     float velocidadMetrosPorSegundo = revolucionesPorSegundo * distanciaPorVuelta;
     float velocidadKmPorHora = velocidadMetrosPorSegundo * 3.6;
@@ -173,9 +173,13 @@ void enviarDatosMqtt()
   client.loop();
 
   float humidity = dht.readHumidity();
+  delay(500);
   float temperature = dht.readTemperature();
+  delay(500);
   float pressure = bmp.readPressure() / 100.0;
+  delay(500);
   const int wind = leerAnemometro();
+  delay(500);
   string rain = howMuchRain();
 
   if (isnan(humidity) || isnan(temperature))
@@ -188,10 +192,15 @@ void enviarDatosMqtt()
   String temperatura = String(temperature);
   String humedad = String(humidity);
   String viento = String(wind);
+  delay(500);
   client.publish(rainTopic, rain.c_str());
+  delay(500);
   client.publish(temperatureTopic, temperatura.c_str());
+  delay(500);
   client.publish(humidityTopic, humedad.c_str());
+  delay(500);
   client.publish(pressureTopic, presion.c_str());
+  delay(500);
   client.publish(windTopic, viento.c_str()); // Enviar datos cada 6 segundos
 }
 void leerSensorDeLluvia()
