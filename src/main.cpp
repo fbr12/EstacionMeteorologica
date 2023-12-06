@@ -44,9 +44,20 @@ const char *WriteAPIKey = "5SJCDAUGILT6TYMW";
 WiFiClient cliente;
 PubSubClient client(cliente);
 
-// Sensores de temperatura ,y humedad, y de presion//
+// Sensores de temperatura ,y humedad, y de presion atmosferica//
 DHT dht(pin1, DHT11);
 Adafruit_BMP280 bmp;
+
+// Definicion de Pines y variables para el Anemometro //
+const int sensorAnemometroPin = 3;    // Pin conectado al sensor del anemómetro
+volatile int contadorVueltas = 0;     // Contador de vueltas
+unsigned long tiempoAnterior = 0;     // Tiempo de la última medición
+const float distanciaPorVuelta = 1.0; // Distancia recorrida por cada vuelta del anemómetro (en metros)
+
+void contadorVuelta() // Funcion que permite llevar la cuenta de las vueltas//
+{
+  contadorVueltas++;
+}
 
 // Funcion que permite leer el BMP (sensor de presion y altitud)//
 void leerBmp()
@@ -65,7 +76,7 @@ void leerBmp()
 }
 
 // Funcion que permite leer el DHT11 (sensor de temperatura y humedad)//
-void leerDht1()
+void leerDht11()
 {
   float t1 = dht.readTemperature();
   float h1 = dht.readHumidity();
@@ -85,23 +96,8 @@ void leerDht1()
   Serial.println("-------------------------");
 }
 
-// Funcion que permite contar las revoluciones//
-void countRevolutions()
-{
-  revolutions++;
-}
-
-// Funcion que permite calcular la velocidad del viento en km/h//
-float calculateWindSpeed(unsigned int revs, unsigned long time)
-{
-  float circumference = 0.9; // Circunferencia del anemómetro en metros (valor ficticio)
-  float windSpeedMps = (revs * circumference) / time;
-  float windSpeedKmh = windSpeedMps * 3.6;
-  return windSpeedKmh;
-}
-
 // Funcion que permite leer el anemometro para utilizarla en el main loop //
-void leerAnemometro()
+float leerAnemometro()
 {
   unsigned long tiempoActual = millis();
 
@@ -118,25 +114,8 @@ void leerAnemometro()
 
     tiempoAnterior = tiempoActual;
     contadorVueltas = 0;
+    return velocidadKmPorHora;
   }
-}
-
-// Funcion que permite leer el anemometro para utilizarla al enviar los datos al Servidor MQTT //
-float leerAnemometro2()
-{
-  detachInterrupt(digitalPinToInterrupt(hallPin)); // Detener interrupciones durante el cálculo
-  windSpeedKmh = calculateWindSpeed(revolutions, elapsedTime);
-  revolutions = 0;
-  startTime = millis();
-  attachInterrupt(digitalPinToInterrupt(hallPin), countRevolutions, RISING);
-  return windSpeedKmh;
-}
-
-// Funcion para determinar la velocidad del viento en Km/H //
-int valorAnemometro()
-{
-  const int windSpeed = leerAnemometro2();
-  return (windSpeed);
 }
 
 // Funcion para conectarse al servidor MQTT //
@@ -181,7 +160,7 @@ string howMuchRain()
     return "Esta Lloviendo mucho";
   }
 
-  return "No hay datos disponibles";
+  return "No hay datos disponibles, revise el sensor";
 }
 
 // Funcion para enviar los datos al servidor MQTT //
@@ -196,7 +175,7 @@ void enviarDatosMqtt()
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
   float pressure = bmp.readPressure() / 100.0;
-  const int wind = leerAnemometro2();
+  const int wind = leerAnemometro();
   string rain = howMuchRain();
 
   if (isnan(humidity) || isnan(temperature))
@@ -235,7 +214,7 @@ void leerSensorDeLluvia()
   }
   else if (valorSensorLluvia < MuchaLluvia)
   {
-    Serial.println("Esta Lloviando mucho");
+    Serial.println("Esta Lloviendo mucho");
   }
 }
 
@@ -256,18 +235,22 @@ void setup()
 
   dht.begin();
   bmp.begin(0x76);
+  pinMode(sensorAnemometroPin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(sensorAnemometroPin), contadorVuelta, FALLING);
 }
 
 // Inicio del Programa//
 void loop()
 {
-  delay(2000);
-  leerDht1();
-  delay(2000);
+  delay(1000);
+  leerDht11();
+  delay(1000);
   leerBmp();
-  delay(2000);
+  delay(1000);
   leerSensorDeLluvia();
+  delay(1000);
+  leerAnemometro();
   enviarDatosMqtt();
   Serial.println("datos enviados");
-  delay(14000);
+  delay(6000);
 }
