@@ -48,7 +48,7 @@ DHT dht(pin1, DHT11);
 Adafruit_BMP280 bmp;
 
 // Definicion de Pines y variables para el Anemometro //
-const int sensorAnemometroPin = 3;    // Pin conectado al sensor del anemómetro
+const int sensorAnemometroPin = 4;    // Pin conectado al sensor del anemómetro
 volatile int contadorVueltas = 0;     // Contador de vueltas
 unsigned long tiempoAnterior = 0;     // Tiempo de la última medición
 const float distanciaPorVuelta = 1.0; // Distancia recorrida por cada vuelta del anemómetro (en metros)
