@@ -5,15 +5,19 @@
 #include <DHT_U.h>
 #include <iostream>
 #include <Arduino.h>
+#include <BMP280_DEV.h>
 #include <PubSubClient.h>
 #include <Adafruit_BMP280.h>
 
 using namespace std;
 
+// Definicion de pines
 #define pin1 2
 #define BMP_SCK (22)
 #define BMP_MOSI (21)
 #define SensorDeLluvia (32)
+BMP280_DEV bmp280(21);
+float temperature2, pressure2, altitude2;
 
 // Configuracion del servidor Mqtt//
 const char *mqttServer = "broker.hivemq.com";
@@ -72,6 +76,15 @@ void leerBmp()
   Serial.print(pressure);
   Serial.println("hPa");
   Serial.println("-------------------------");
+}
+void leerBmp2()
+{
+  bmp280.startForcedConversion();                                 // Start BMP280 forced conversion (if we're in SLEEP_MODE)
+  if (bmp280.getMeasurements(temperature2, pressure2, altitude2)) // Check if the measurement is complete
+  {
+    Serial.print(pressure2);
+    Serial.print(F("hPa   "));
+  }
 }
 
 // Funcion que permite leer el DHT11 (sensor de temperatura y humedad)//
