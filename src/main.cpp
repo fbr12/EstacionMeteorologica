@@ -5,9 +5,10 @@
 #include <DHT_U.h>
 #include <iostream>
 #include <Arduino.h>
-#include <BMP280_DEV.h>
 #include <PubSubClient.h>
-#include <Adafruit_BMP280.h>
+#include <Adafruit_BMP085.h>
+#include <Adafruit_I2CDevice.h>
+#include <Adafruit_BusIO_Register.h>
 
 using namespace std;
 
@@ -16,7 +17,6 @@ using namespace std;
 #define BMP_SCK (22)
 #define BMP_MOSI (21)
 #define SensorDeLluvia (32)
-BMP280_DEV bmp280(21);
 float temperature2, pressure2, altitude2;
 
 // Configuracion del servidor Mqtt//
@@ -49,7 +49,7 @@ PubSubClient client(cliente);
 
 // Sensores de temperatura ,y humedad, y de presion atmosferica//
 DHT dht(pin1, DHT11);
-Adafruit_BMP280 bmp;
+Adafruit_BMP085 bmp;
 
 // Definicion de Pines y variables para el Anemometro //
 const int sensorAnemometroPin = 4;    // Pin conectado al sensor del anemómetro
@@ -77,28 +77,12 @@ void leerBmp()
   Serial.println("hPa");
   Serial.println("-------------------------");
 }
-void leerBmp2()
-{
-  bmp280.startForcedConversion();                                 // Start BMP280 forced conversion (if we're in SLEEP_MODE)
-  if (bmp280.getMeasurements(temperature2, pressure2, altitude2)) // Check if the measurement is complete
-  {
-    Serial.print(pressure2);
-    Serial.print(F("hPa   "));
-  }
-}
 
 // Funcion que permite leer el DHT11 (sensor de temperatura y humedad)//
 void leerDht11()
 {
   float t1 = dht.readTemperature();
   float h1 = dht.readHumidity();
-  while (isnan(t1) && isnan(h1))
-  {
-    Serial.println("lectura incorrecta, repetir");
-    delay(2000);
-    t1 = dht.readTemperature();
-    h1 = dht.readHumidity();
-  }
   Serial.print("temperatura DHT11: ");
   Serial.print(t1);
   Serial.println("°C");
@@ -255,7 +239,7 @@ void setup()
   Serial.println("WiFi conectado");
 
   dht.begin();
-  bmp.begin(0x76);
+  bmp.begin(0x33);
   pinMode(sensorAnemometroPin, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(sensorAnemometroPin), contadorVuelta, FALLING);
 }
